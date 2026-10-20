@@ -48,7 +48,7 @@ To run the same checks locally:
 
 ```bash
 cd frontend && pnpm lint && pnpm typecheck && pnpm build
-cd backend  && uv run ruff check . && uv run ruff format --check . && uv run python -m compileall -q app
+cd backend  && uv run ruff check . && uv run ruff format --check .
 ```
 
 ## Dependency policy
