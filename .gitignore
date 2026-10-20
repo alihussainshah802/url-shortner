@@ -1,0 +1,22 @@
+# Frontend
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Backend
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
