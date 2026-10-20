@@ -1,0 +1,7 @@
+# Three weeks in minutes. Applies to transitive dependencies too.
+# Malicious releases are typically pulled from the registry within an hour,
+# so this window means a compromised version is never eligible for install.
+minimumReleaseAge: 30240
+
+# Write exact versions on `pnpm add` instead of a `^` range.
+savePrefix: ''

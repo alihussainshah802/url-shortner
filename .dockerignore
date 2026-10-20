@@ -1,0 +1,17 @@
+.git
+.gitignore
+.devcontainer
+.env
+.env.*
+
+**/node_modules
+**/.venv
+**/dist
+**/__pycache__
+**/*.tsbuildinfo
+.pnpm-store
+**/.pytest_cache
+**/.ruff_cache
+
+README.md
+docker-compose.yml

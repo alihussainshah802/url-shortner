@@ -1,0 +1,20 @@
+[project]
+name = "url-shortner-api"
+version = "0.1.0"
+description = "FastAPI backend for the url-shortner project"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.141.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv]
+# Three weeks, as a rolling window. Applies to transitive dependencies too.
+# Malicious releases are typically pulled from the registry within an hour,
+# so this window means a compromised version is never eligible for install.
+exclude-newer = "21 days"
+
+# Refuse to build source distributions: an sdist's setup.py executes arbitrary
+# code at install time. If a dependency has no wheel, stop and decide -- do not
+# flip this to false.
+no-build = true
