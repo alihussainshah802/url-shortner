@@ -41,6 +41,16 @@ Both setups route `/api` to the backend (Vite proxy locally, nginx in Docker), s
 the browser talks to a single origin and no CORS setup is needed. Put every new
 route under `/api`.
 
+## Checks
+
+GitHub Actions runs `frontend.yml` and `backend.yml` (in `.github/workflows/`) on pull requests and on pushes to `main`. 
+To run the same checks locally:
+
+```bash
+cd frontend && pnpm lint && pnpm typecheck && pnpm build
+cd backend  && uv run ruff check . && uv run ruff format --check . && uv run python -m compileall -q app
+```
+
 ## Dependency policy
 
 - **frontend**: exact versions, and a 3-week `minimumReleaseAge` (`frontend/pnpm-workspace.yaml`).
