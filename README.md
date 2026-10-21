@@ -55,10 +55,10 @@ docker compose up --build   # app at http://localhost:8080, short links at http:
 docker compose down
 ```
 
-The backend container runs `alembic upgrade head` before starting. The frontend container
-serves the built app with nginx and forwards `/api` to the backend. Ports are published on
-loopback only. The backend and frontend containers run non-root, read-only, with no extra
-capabilities.
+A one-shot `migrate` service runs `alembic upgrade head` once and exits; the backend starts only
+after it succeeds. The frontend
+container serves the built app with nginx and forwards `/api` to the backend. Ports are published on
+loopback only. The containers run non-root, read-only, with no extra capabilities.
 
 ## Checks
 

@@ -1,7 +1,11 @@
+// "scheme://" at the very start. Checking only the start matters: a bare address
+// can contain "://" later on, e.g. google.com/url?q=https://example.com.
+const SCHEME_PREFIX = /^[a-z][a-z0-9+.-]*:\/\//i;
+
 /** Adds https:// when the user pastes a bare address like "example.com/page". */
 export function normalizeUrl(input: string): string {
   const value = input.trim();
-  if (value === "" || value.includes("://")) return value;
+  if (value === "" || SCHEME_PREFIX.test(value)) return value;
   return `https://${value}`;
 }
 

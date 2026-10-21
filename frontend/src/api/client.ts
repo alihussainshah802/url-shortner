@@ -1,3 +1,5 @@
+import { errorMessage } from "./utils.ts";
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -6,17 +8,6 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
   }
-}
-
-async function errorMessage(res: Response): Promise<string> {
-  const data: unknown = await res.json().catch(() => null);
-  if (typeof data === "object" && data !== null && "detail" in data) {
-    const detail = data.detail;
-    if (typeof detail === "string") return detail;
-    // FastAPI's validation errors arrive as a list; the only field is the URL.
-    if (Array.isArray(detail)) return "Enter a link that starts with http:// or https://.";
-  }
-  return "Something went wrong. Try again.";
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
