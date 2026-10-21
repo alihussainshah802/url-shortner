@@ -29,4 +29,20 @@ describe("errorMessage", () => {
     const res = new Response("<html>502 Bad Gateway</html>", { status: 502 });
     return expect(errorMessage(res)).resolves.toBe("Something went wrong. Try again.");
   });
+
+  it.each([
+    ["missing", "Enter a link to shorten."],
+    ["url_scheme", "Only http:// and https:// links can be shortened."],
+    ["url_too_long", "That link is too long. Links can be up to 2,083 characters."],
+    ["url_credentials", "Links can't contain a username or password."],
+  ])("explains the %s validation error in plain words", (type, message) => {
+    return expect(errorMessage(json({ detail: [{ type, loc: ["body", "url"], msg: "x" }] }))).resolves.toBe(message);
+  });
+
+  it("uses the generic link instruction for a validation type it does not know", () => {
+    return expect(errorMessage(json({ detail: [{ type: "something_new" }] }))).resolves.toBe(
+      "Enter a link that starts with http:// or https://.",
+    );
+  });
 });
+
