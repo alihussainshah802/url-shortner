@@ -41,11 +41,11 @@ def test_database_url_is_built_from_parts_with_the_password_escaped() -> None:
         postgres_db="shortner",
         postgres_host="db",
     )
-    url = make_url(settings.database_url)
+    url = make_url(settings.database_url.get_secret_value())
     assert url.drivername == "postgresql+psycopg"
     assert (url.username, url.host, url.port, url.database) == ("shortner", "db", 5432, "shortner")
     assert url.password == password
-    assert password not in settings.database_url  # it was percent-encoded
+    assert password not in settings.database_url.get_secret_value()  # percent-encoded
 
 
 def test_an_explicit_database_url_wins_over_the_parts() -> None:
@@ -56,7 +56,7 @@ def test_an_explicit_database_url_wins_over_the_parts() -> None:
         postgres_password="p",
         postgres_db="d",
     )
-    assert settings.database_url == "sqlite://"
+    assert settings.database_url.get_secret_value() == "sqlite://"
 
 
 def test_missing_database_settings_are_rejected() -> None:
