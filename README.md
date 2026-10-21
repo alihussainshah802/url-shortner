@@ -28,9 +28,6 @@ docker compose up -d db
 cd backend && uv run alembic upgrade head
 ```
 
-`.env` is gitignored. Use `127.0.0.1`, not `localhost`, in `DATABASE_URL`: on Windows
-`localhost` can stall for minutes on an IPv6 attempt.
-
 ## Run locally (hot reload)
 
 Backend, at http://127.0.0.1:8000 (API docs at `/docs`):
@@ -69,11 +66,13 @@ GitHub Actions runs `frontend.yml` and `backend.yml` (in `.github/workflows/`) o
 and on pushes to `main`. To run the same checks locally:
 
 ```bash
-cd frontend && pnpm lint && pnpm typecheck && pnpm build
+cd frontend && pnpm lint && pnpm typecheck && pnpm test && pnpm build
 cd backend  && uv run ruff check . && uv run ruff format --check . && uv run pytest
 ```
 
-Backend tests run against in-memory SQLite, so they need no database.
+Backend tests run against in-memory SQLite, so they need no database. Frontend tests use
+Vitest (`pnpm test` runs once, `pnpm test:watch` re-runs on save); test files sit next to the
+code they cover as `*.test.ts`.
 
 ## Dependency policy
 

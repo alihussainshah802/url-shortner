@@ -8,17 +8,19 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 
 import { LabelResult } from "./LabelResult.tsx";
-import { normalizeUrl } from "./utils.ts";
+import { isValidUrl, normalizeUrl } from "./utils.ts";
 
 export function ShortenForm() {
   const [url, setUrl] = useState("");
   const { mutate, data, error, isPending, reset } = useCreateLink();
 
+  const valid = isValidUrl(url);
+  const showHint = url.trim() !== "" && !valid;
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const target = normalizeUrl(url);
-    if (target === "") return;
-    mutate(target);
+    if (!valid) return;
+    mutate(normalizeUrl(url));
   }
 
   return (
@@ -46,17 +48,23 @@ export function ShortenForm() {
               if (error) reset();
             }}
             aria-invalid={error ? true : undefined}
+            aria-describedby={showHint ? "url-hint" : undefined}
             className="h-11 border-transparent bg-card font-mono text-sm text-card-foreground"
           />
           <Button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || !valid}
             className="h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/85"
           >
             {isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Printer aria-hidden />}
             {isPending ? "Printing…" : "Print short link"}
           </Button>
         </div>
+        {showHint && (
+          <p id="url-hint" className="mt-3 font-mono text-xs text-primary-foreground/70">
+            Enter a full link, like example.com/page
+          </p>
+        )}
         {error && (
           <Alert variant="destructive" className="mt-4 border-0 bg-card">
             <AlertDescription>{error.message}</AlertDescription>

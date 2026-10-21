@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   check:
-    name: Lint, types, build
+    name: Lint, types, tests, build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -42,4 +42,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm build
