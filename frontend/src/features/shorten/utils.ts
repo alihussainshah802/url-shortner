@@ -14,18 +14,32 @@ export function normalizeUrl(input: string): string {
 const HOSTNAME =
   /^(localhost|\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:.]+\]|([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]{2,})$/i;
 
-/** True when the input would make a usable http(s) link once normalized. */
-export function isValidUrl(input: string): boolean {
+/** The longest link the API accepts (pydantic's HttpUrl limit), counted after normalizing. */
+export const MAX_URL_LENGTH = 2083;
+
+export type UrlCheck = "empty" | "valid" | "invalid" | "too-long";
+
+/** Says whether the input would make a usable http(s) link once normalized, and if not, why. */
+export function checkUrl(input: string): UrlCheck {
+  const normalized = normalizeUrl(input);
+  if (normalized === "") return "empty";
+  if (normalized.length > MAX_URL_LENGTH) return "too-long";
+
   let url: URL;
   try {
-    url = new URL(normalizeUrl(input));
+    url = new URL(normalized);
   } catch {
-    return false;
+    return "invalid";
   }
-  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  if (url.protocol !== "http:" && url.protocol !== "https:") return "invalid";
   // "mailto:a@b.com" would otherwise parse as https://mailto:a@b.com (user:pass@host).
-  if (url.username !== "" || url.password !== "") return false;
-  return HOSTNAME.test(url.hostname);
+  if (url.username !== "" || url.password !== "") return "invalid";
+  return HOSTNAME.test(url.hostname) ? "valid" : "invalid";
+}
+
+/** True when the input would make a usable http(s) link once normalized. */
+export function isValidUrl(input: string): boolean {
+  return checkUrl(input) === "valid";
 }
 
 export function printedAt(iso: string): string {

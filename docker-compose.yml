@@ -24,6 +24,35 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # Redirect cache only: no persistence, memory capped, least-recently-used keys are
+  # evicted when full. Losing it just means the next redirects read Postgres.
+  redis:
+    image: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    restart: unless-stopped
+    # The password comes from the environment, so it is never written into this file
+    # or the image. It matters: this cache decides where every cached link redirects.
+    command:
+      - sh
+      - -c
+      - exec redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env (see .env.example)}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}  # lets the healthcheck's redis-cli authenticate
+    user: redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    read_only: true
+    tmpfs:
+      - /data
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
   # One-shot job: applies database migrations, then exits. Running it once here,
   # instead of in every backend container, avoids replicas racing on the same migration.
   migrate:
@@ -50,9 +79,16 @@ services:
     environment:
       <<: *postgres-env
       BASE_URL: ${BASE_URL:-http://localhost:8000}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
+      # Redis is only a cache and the backend runs without it, so a Redis that fails to
+      # start must not stop the backend from starting.
+      redis:
+        condition: service_started
+        required: false
       migrate:
         condition: service_completed_successfully
     ports:

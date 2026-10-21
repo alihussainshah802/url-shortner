@@ -1,81 +1,65 @@
 # url-shortner
 
-Paste a long link, get a short one. React (Vite + TypeScript, Tailwind, shadcn/ui,
-TanStack Query) frontend and FastAPI + Postgres backend.
+Paste a long link, get a short one. React + TypeScript frontend, FastAPI + Postgres backend,
+Redis cache.
 
 ```
-url-shortner/
-├── frontend/           React 19 + Vite + TypeScript (pnpm)
-├── backend/            FastAPI + SQLAlchemy + Alembic (uv, Python 3.13)
-└── docker-compose.yml  Postgres, backend and frontend as containers
+frontend/           React 19, Vite, Tailwind, shadcn/ui, TanStack Query (pnpm)
+backend/            FastAPI, SQLAlchemy, Alembic (uv, Python 3.13)
+docker-compose.yml  Postgres, Redis, backend and frontend
 ```
 
 ## How it works
 
-- `POST /api/links` with `{"url": "https://..."}` returns `{code, short_url, original_url, created_at}`.
-  Only `http`/`https` links are accepted.
-- `GET /{code}` answers with a `302` to the original URL. A 302 (not 301) so browsers keep
-  asking the server, which is what click counts, expiry and edits will need.
-- Codes are 7 random base62 characters. The unique constraint on `links.code` is the source of
-  truth: on a collision the insert is retried with a new code.
-- Short links are built from `BASE_URL` and served by the backend, not the frontend.
+- `POST /api/links` takes `{"url": "https://..."}` and returns the short link. Only `http`/`https`
+  links up to 2083 characters, without a username or password, are accepted (`422` otherwise).
+- `GET /{code}` redirects with a `302` to the original URL. It is a 302, not a 301, so clicks can
+  be counted and links edited or expired later.
+- Redirects are cached in Redis for an hour. If Redis is down, redirects fall back to Postgres.
+- Errors are always JSON, and server errors carry a `request_id` that matches the server log.
+  `GET /api/health` checks the process is up; `GET /api/health/ready` also checks Postgres.
+- Not built yet: rate limiting and screening of malicious destinations.
 
 ## Setup
 
 ```bash
-cp .env.example .env
-docker compose up -d db
+cp .env.example .env    # fill in POSTGRES_USER, POSTGRES_DB, POSTGRES_PASSWORD, REDIS_PASSWORD
+docker compose up -d db redis
 cd backend && uv run alembic upgrade head
 ```
 
-## Run locally (hot reload)
+Use letters and digits for passwords (`openssl rand -hex 16`): `$` and `#` are interpreted in
+`.env` files. Use `127.0.0.1`, not `localhost`, for hosts: on Windows `localhost` can stall.
 
-Backend, at http://127.0.0.1:8000 (API docs at `/docs`):
+## Run
 
-```bash
-cd backend
-uv run uvicorn app.main:app --reload
-```
-
-Frontend, at http://127.0.0.1:5173:
+With Docker (app at http://localhost:8080, short links at http://localhost:8000):
 
 ```bash
-cd frontend
-pnpm install
-pnpm dev
+docker compose up --build
 ```
 
-Vite proxies `/api` to the backend, so the browser talks to one origin and no CORS setup is
-needed. Put every new API route under `/api`; anything else is treated as a short code.
-
-## Run with Docker
+Locally with hot reload:
 
 ```bash
-docker compose up --build   # app at http://localhost:8080, short links at http://localhost:8000
-docker compose down
+cd backend  && uv run uvicorn app.main:app --reload   # http://127.0.0.1:8000, docs at /docs
+cd frontend && pnpm install && pnpm dev                # http://127.0.0.1:5173
 ```
 
-A one-shot `migrate` service runs `alembic upgrade head` once and exits; the backend starts only
-after it succeeds. The frontend
-container serves the built app with nginx and forwards `/api` to the backend. Ports are published on
-loopback only. The containers run non-root, read-only, with no extra capabilities.
+Vite and nginx both forward `/api` to the backend, so the browser uses one origin and needs no
+CORS setup. Put every new API route under `/api`: any other path is treated as a short code.
 
 ## Checks
 
-GitHub Actions runs `frontend.yml` and `backend.yml` (in `.github/workflows/`) on pull requests
-and on pushes to `main`. To run the same checks locally:
+GitHub Actions runs the same checks on every pull request:
 
 ```bash
 cd frontend && pnpm lint && pnpm typecheck && pnpm test && pnpm build
 cd backend  && uv run ruff check . && uv run ruff format --check . && uv run pytest
 ```
 
-Backend tests run against in-memory SQLite, so they need no database. Frontend tests use
-Vitest (`pnpm test` runs once, `pnpm test:watch` re-runs on save); test files sit next to the
-code they cover as `*.test.ts`.
-
 ## Dependency policy
 
-- **frontend**: exact versions, and a 3-week `minimumReleaseAge` (`frontend/pnpm-workspace.yaml`).
-- **backend**: `uv.lock` pins everything; `exclude-newer = "21 days"` and `no-build = true`
-  (wheels only) in `backend/pyproject.toml`.
+- **frontend:** exact versions and a 3-week `minimumReleaseAge` (`frontend/pnpm-workspace.yaml`).
+- **backend:** `uv.lock` pins everything, with `exclude-newer = "21 days"` and wheels only
+  (`backend/pyproject.toml`).

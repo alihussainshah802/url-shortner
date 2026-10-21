@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isValidUrl, normalizeUrl, printedAt } from "./utils.ts";
+import { checkUrl, isValidUrl, MAX_URL_LENGTH, normalizeUrl, printedAt } from "./utils.ts";
 
 describe("normalizeUrl", () => {
   it("adds https:// to a bare address", () => {
@@ -82,5 +82,37 @@ describe("printedAt", () => {
 
   it("reports an invalid timestamp rather than throwing", () => {
     expect(printedAt("not a date")).toBe("Invalid Date");
+  });
+});
+
+describe("checkUrl", () => {
+  it("says why a link is not usable", () => {
+    expect(checkUrl("")).toBe("empty");
+    expect(checkUrl("   ")).toBe("empty");
+    expect(checkUrl("hello")).toBe("invalid");
+    expect(checkUrl("ftp://example.com/x")).toBe("invalid");
+    expect(checkUrl("https://user:pw@example.com")).toBe("invalid");
+    expect(checkUrl("example.com/page")).toBe("valid");
+  });
+
+  it("accepts a link of exactly the API limit and rejects one character more", () => {
+    const base = "https://example.com/";
+    const atLimit = base + "a".repeat(MAX_URL_LENGTH - base.length);
+    expect(atLimit).toHaveLength(MAX_URL_LENGTH);
+    expect(checkUrl(atLimit)).toBe("valid");
+    expect(checkUrl(atLimit + "a")).toBe("too-long");
+  });
+
+  it("counts the https:// that normalizing adds", () => {
+    // 2083 characters as typed, so 2091 once https:// is added: over the limit.
+    const bare = "example.com/" + "a".repeat(MAX_URL_LENGTH - "example.com/".length);
+    expect(bare).toHaveLength(MAX_URL_LENGTH);
+    expect(checkUrl(bare)).toBe("too-long");
+  });
+
+  it("agrees with isValidUrl", () => {
+    for (const input of ["example.com", "hello", "", "https://" + "a".repeat(2100) + ".com"]) {
+      expect(isValidUrl(input)).toBe(checkUrl(input) === "valid");
+    }
   });
 });

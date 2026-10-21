@@ -8,14 +8,19 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 
 import { LabelResult } from "./LabelResult.tsx";
-import { isValidUrl, normalizeUrl } from "./utils.ts";
+import { checkUrl, MAX_URL_LENGTH, normalizeUrl } from "./utils.ts";
 
 export function ShortenForm() {
   const [url, setUrl] = useState("");
   const { mutate, data, error, isPending, reset } = useCreateLink();
 
-  const valid = isValidUrl(url);
-  const showHint = url.trim() !== "" && !valid;
+  const check = checkUrl(url);
+  const valid = check === "valid";
+  const showHint = check === "invalid" || check === "too-long";
+  const hint =
+    check === "too-long"
+      ? `That link is too long. Links can be up to ${MAX_URL_LENGTH.toLocaleString()} characters.`
+      : "Enter a full link, like example.com/page";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,12 +67,20 @@ export function ShortenForm() {
         </div>
         {showHint && (
           <p id="url-hint" className="mt-3 font-mono text-xs text-primary-foreground/70">
-            Enter a full link, like example.com/page
+            {hint}
           </p>
         )}
         {error && (
           <Alert variant="destructive" className="mt-4 border-0 bg-card">
-            <AlertDescription>{error.message}</AlertDescription>
+            <AlertDescription>
+              <span>{error.message}</span>
+              {error.status >= 500 && error.requestId && (
+                // Lets the problem be matched to its server log line when reported.
+                <span className="block font-mono text-xs opacity-70">
+                  Reference: {error.requestId}
+                </span>
+              )}
+            </AlertDescription>
           </Alert>
         )}
       </form>
