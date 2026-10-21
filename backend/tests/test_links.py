@@ -41,12 +41,26 @@ def test_redirect_uses_302_and_points_at_original(client: TestClient) -> None:
     assert res.headers["location"] == "https://example.com/target"
 
 
+def test_head_gets_the_same_redirect_as_get(client: TestClient) -> None:
+    code = create(client, "https://example.com/target").json()["code"]
+    res = client.head(f"/{code}")
+    assert res.status_code == 302
+    assert res.headers["location"] == "https://example.com/target"
+
+
 def test_unknown_code_is_404(client: TestClient) -> None:
     assert client.get("/zzzzzzz").status_code == 404
 
 
-def test_malformed_code_is_rejected_before_any_lookup(client: TestClient) -> None:
-    assert client.get("/ab").status_code == 422
+@pytest.mark.parametrize("path", ["/ab", "/favicon.ico", "/robots.txt", "/abc-def", "/" + "a" * 33])
+def test_paths_that_cannot_be_codes_are_404(client: TestClient, path: str) -> None:
+    res = client.get(path)
+    assert res.status_code == 404
+    assert res.json() == {"detail": "Link not found."}
+
+
+def test_head_on_an_unknown_code_is_404(client: TestClient) -> None:
+    assert client.head("/zzzzzzz").status_code == 404
 
 
 def test_collision_retries_with_a_new_code(
