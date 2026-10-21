@@ -1,21 +1,32 @@
-import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { Check, Copy, TriangleAlert } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Link } from "@/api/links.ts";
 import { Button } from "@/components/ui/button.tsx";
 
 import { printedAt } from "./utils.ts";
 
+type CopyState = "idle" | "copied" | "failed";
+
 export function LabelResult({ link }: { link: Link }) {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>("idle");
+  const resetTimer = useRef<number | undefined>(undefined);
 
   const saved = link.original_url.length - link.short_url.length;
 
-  function copy() {
-    void navigator.clipboard.writeText(link.short_url).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
+  useEffect(() => () => window.clearTimeout(resetTimer.current), []);
+
+  async function copy() {
+    try {
+      // navigator.clipboard is missing on non-secure origins (plain http on a LAN
+      // address) and writeText rejects when permission is denied; both land here.
+      await navigator.clipboard.writeText(link.short_url);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+    window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => setCopyState("idle"), 2500);
   }
 
   return (
@@ -52,9 +63,15 @@ export function LabelResult({ link }: { link: Link }) {
             <p className="font-mono text-xs text-muted-foreground">
               {saved > 0 ? `${saved} characters shorter` : "Already short"} · {printedAt(link.created_at)}
             </p>
-            <Button type="button" variant="outline" size="sm" onClick={copy}>
-              {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-              <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
+            <Button type="button" variant="outline" size="sm" onClick={() => void copy()}>
+              {copyState === "copied" && <Check aria-hidden />}
+              {copyState === "failed" && <TriangleAlert aria-hidden />}
+              {copyState === "idle" && <Copy aria-hidden />}
+              <span aria-live="polite">
+                {copyState === "copied" && "Copied"}
+                {copyState === "failed" && "Copy failed. Select the link instead"}
+                {copyState === "idle" && "Copy"}
+              </span>
             </Button>
           </div>
         </div>

@@ -12,6 +12,18 @@ describe("normalizeUrl", () => {
     expect(normalizeUrl("https://example.com/a?b=1")).toBe("https://example.com/a?b=1");
   });
 
+  it("adds https:// when the only :// is inside the query or fragment", () => {
+    expect(normalizeUrl("google.com/url?q=https://example.com")).toBe(
+      "https://google.com/url?q=https://example.com",
+    );
+    expect(normalizeUrl("example.com/#a://b")).toBe("https://example.com/#a://b");
+  });
+
+  it("leaves any scheme:// prefix alone, whatever the case", () => {
+    expect(normalizeUrl("HTTPS://Example.com")).toBe("HTTPS://Example.com");
+    expect(normalizeUrl("ftp://example.com/file")).toBe("ftp://example.com/file");
+  });
+
   it("trims surrounding whitespace", () => {
     expect(normalizeUrl("  example.com  ")).toBe("https://example.com");
   });
@@ -26,6 +38,9 @@ describe("isValidUrl", () => {
   it.each([
     "example.com",
     "example.com/page?x=1&y=2",
+    "google.com/url?q=https://example.com",
+    "example.com/redirect?next=http://other.com/x",
+    "example.com/#a://b",
     "  example.com  ",
     "https://example.com/a/b",
     "http://sub.domain.example.co.uk/path#frag",
